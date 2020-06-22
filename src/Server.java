@@ -12,6 +12,7 @@ import java.util.Vector;
 
 // RF01
 public class Server extends Thread {
+                                        // " >> ", "saiu", "chat"
 	private final String[] sendAction = {"#AA#", "#vdlx#","gr#fkdw$"};
     private static Vector clientes;
     private Socket conexao;
@@ -24,29 +25,51 @@ public class Server extends Thread {
     @SuppressWarnings("unchecked")
     public void run() {
         try {
-            BufferedReader entrada = new BufferedReader(new InputStreamReader(conexao.getInputStream()));
+            BufferedReader entrada = new BufferedReader(
+                new InputStreamReader(conexao.getInputStream())
+            );
             PrintStream saida = new PrintStream(conexao.getOutputStream());
 
-            meuNome = entrada.readLine();
-            if (meuNome == null) {
-                return;
-            }
+            setClientName(entrada.readLine());
             clientes.add(saida);
-            String linha = entrada.readLine();
-            while (linha != null && !(linha.trim().equals(""))) {
-                sendToAll(saida, sendAction[0], linha);
-
-                linha = entrada.readLine();
-            }
-            sendToAll(saida, sendAction[1], sendAction[2]);
-            clientes.remove(saida);
-            conexao.close();
+            sendReceivedMessageToEveryone(entrada, saida);
+            finishConnection(saida);
         } catch (IOException e) {
             System.out.println("IOException: " + e);
         }
     }
 
-    //enviar uma mensagem para todos, menos para o próprio
+    private void setClientName(String name) {
+        meuNome = name;
+        if (meuNome == null) {
+            System.exit(0);
+        }
+    }
+
+    private void sendReceivedMessageToEveryone(BufferedReader entrada, PrintStream saida) {
+        try {
+            String linha = entrada.readLine();
+            while (linha != null && !(linha.trim().equals(""))) {
+                sendToAll(saida, sendAction[0], linha);
+                linha = entrada.readLine();
+            }
+        } catch (IOException e) {
+            System.out.println("ERRO: sendReceivedMessageToEveryone: saida indisponÃ­vel");
+            e.printStackTrace();
+        }
+    }
+
+    private void finishConnection(PrintStream saida) {
+        try {
+            sendToAll(saida, sendAction[1], sendAction[2]);
+            clientes.remove(saida);
+            conexao.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //enviar uma mensagem para todos, menos para o prï¿½prio
     @SuppressWarnings("unchecked")
 // RF05
     public void sendToAll(PrintStream saida, String acao, String linha) throws IOException {
@@ -59,7 +82,6 @@ public class Server extends Thread {
             PrintStream chat = (PrintStream) e.nextElement();
             if (chat != saida) {
                 pw.println(meuNome + acao + linha);
-
                 fw.close();
                 chat.println(meuNome + acao + linha);
             }
@@ -70,7 +92,7 @@ public class Server extends Thread {
         clientes = new Vector<PrintStream>();
         try {
             ServerSocket s = new ServerSocket(5858);
-// RF02            
+        // RF02            
             while (true) {
                 System.out.println("Esperando alguem se conectar...");
                 Socket conexao = s.accept();
